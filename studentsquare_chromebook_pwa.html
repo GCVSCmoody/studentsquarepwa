@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudentSquare Chromebook Hub & PWA Client</title>
+    <!-- Dynamic PWA Manifest Placeholder -->
+    <link id="manifest-placeholder" rel="manifest">
+    <meta name="theme-color" content="#4f46e5">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eep2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbars for Chrome OS feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.4);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.7);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col transition-colors duration-200 selection:bg-brand-500 selection:text-white">
+
+    <!-- Top Header Navigation -->
+    <header class="h-16 bg-slate-800/90 dark:bg-slate-900/90 border-b border-slate-700/60 sticky top-0 z-40 backdrop-blur-md px-4 flex items-center justify-between">
+        <!-- Logo & Branding -->
+        <div class="flex items-center space-x-3">
+            <button id="toggle-sidebar-btn" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition lg:hidden" title="Toggle Sidebar">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-brand-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0112 20.055a11.952 11.952 0 01-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <h1 class="font-bold text-lg tracking-tight text-white">StudentSquare</h1>
+                    <span class="px-2 py-0.5 text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full">Chromebook PWA</span>
+                </div>
+                <p class="text-xs text-slate-400 hidden sm:block">mystudentsquare.com Hub & Launcher</p>
+            </div>
+        </div>
+
+        <!-- Global Search Input & Quick Trigger -->
+        <div class="hidden md:flex items-center flex-1 max-w-md mx-6">
+            <div class="relative w-full">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </span>
+                <input type="text" id="global-search-input" placeholder="Search posts, homework, tasks, or staff (Ctrl+K)..." 
+                    class="w-full pl-9 pr-10 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+                <kbd class="absolute right-2.5 top-2 hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-slate-700/50 rounded border border-slate-600">Ctrl K</kbd>
+            </div>
+        </div>
+
+        <!-- Right System Indicators & Utility Buttons -->
+        <div class="flex items-center space-x-2">
+            <!-- Connection Status -->
+            <div id="connection-badge" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="connection-text" class="hidden sm:inline">Online</span>
+            </div>
+
+            <!-- Install PWA Button (Hidden by default until triggered) -->
+            <button id="pwa-install-btn" class="hidden items-center space-x-1 px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-medium shadow-sm transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Install App</span>
+            </button>
+
+            <!-- Shortcuts Modal Trigger -->
+            <button id="open-shortcuts-btn" title="Keyboard Shortcuts (?)" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </button>
+
+            <!-- Theme Toggle -->
+            <button id="theme-toggle-btn" title="Toggle Dark/Light Mode" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+                <svg id="theme-sun" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <svg id="theme-moon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+            </button>
+
+            <!-- Chromebook Clock -->
+            <div id="chromebook-clock" class="hidden lg:block pl-2 border-l border-slate-700 text-xs text-slate-400 font-mono">
+                12:00 PM
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar-nav" class="w-64 bg-slate-800/60 border-r border-slate-800 flex flex-col justify-between transition-all duration-300 z-30 shrink-0">
+            <!-- Navigation Links -->
+            <nav class="p-3 space-y-1">
+                <div class="px-3 py-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Navigation</div>
+                
+                <button data-tab="live-portal" class="nav-tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition text-white bg-brand-600">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                        <span>Live Portal</span>
+                    </div>
+                    <kbd class="text-[10px] font-mono px-1.5 py-0.5 bg-black/20 rounded">Ctrl 1</kbd>
+                </button>
+
+                <button data-tab="feed-hub" class="nav-tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+                        <span>Announcements Feed</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span id="unread-feed-badge" class="px-1.5 py-0.5 text-xs font-bold rounded-full bg-indigo-500 text-white">3</span>
+                        <kbd class="text-[10px] font-mono px-1.5 py-0.5 bg-slate-700 rounded">Ctrl 2</kbd>
+                    </div>
+                </button>
+
+                <button data-tab="messages-hub" class="nav-tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                        <span>Staff Directory & Chat</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span id="unread-msg-badge" class="px-1.5 py-0.5 text-xs font-bold rounded-full bg-emerald-500 text-white">2</span>
+                        <kbd class="text-[10px] font-mono px-1.5 py-0.5 bg-slate-700 rounded">Ctrl 3</kbd>
+                    </div>
+                </button>
+
+                <button data-tab="planner-hub" class="nav-tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                        <span>Schedule & Homework</span>
+                    </div>
+                    <kbd class="text-[10px] font-mono px-1.5 py-0.5 bg-slate-700 rounded">Ctrl 4</kbd>
+                </button>
+
+                <button data-tab="notes-hub" class="nav-tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        <span>Class Notes Scratchpad</span>
+                    </div>
+                    <kbd class="text-[10px] font-mono px-1.5 py-0.5 bg-slate-700 rounded">Ctrl 5</kbd>
+                </button>
+
+                <div class="pt-4 px-3 py-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">System & Setup</div>
+
+                <button data-tab="pwa-guide" class="nav-tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        <span>Chromebook PWA Guide</span>
+                    </div>
+                </button>
+            </nav>
+
+            <!-- Bottom Chromebook Quick Info Card -->
+            <div class="p-3">
+                <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-3">
+                    <div class="flex items-center space-x-2 text-xs font-semibold text-slate-200 mb-1">
+                        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span>Chromebook Quick Tip</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        Pin this application to your Chrome OS Shelf for single-click full screen launcher access.
+                    </p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Section -->
+        <main class="flex-1 bg-slate-900/40 relative overflow-y-auto p-4 md:p-6">
+
+            <!-- TAB 1: LIVE PORTAL -->
+            <section id="tab-live-portal" class="tab-content h-full flex flex-col space-y-4">
+                <!-- Portal Quick Toolbar -->
+                <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></div>
+                        <div>
+                            <h2 class="font-semibold text-slate-100 text-sm md:text-base">Official StudentSquare Web Portal</h2>
+                            <p class="text-xs text-slate-400">Target URL: <span class="font-mono text-cyan-400">https://www.mystudentsquare.com</span></p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="launchPopoutWindow()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium flex items-center space-x-1.5 shadow transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            <span>Dedicated Window</span>
+                        </button>
+
+                        <a href="https://www.mystudentsquare.com" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium flex items-center space-x-1.5 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            <span>New Tab</span>
+                        </a>
+
+                        <button onclick="reloadIframe()" class="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs transition" title="Refresh Frame">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Endpoints Toolbar -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <button onclick="openPortalEndpoint('https://www.mystudentsquare.com/signin')" class="p-2.5 bg-slate-800/60 border border-slate-700/60 hover:border-brand-500 rounded-xl text-center text-xs text-slate-300 hover:text-white transition">
+                        🔑 Direct Sign In
+                    </button>
+                    <button onclick="openPortalEndpoint('https://www.mystudentsquare.com/posts')" class="p-2.5 bg-slate-800/60 border border-slate-700/60 hover:border-brand-500 rounded-xl text-center text-xs text-slate-300 hover:text-white transition">
+                        📢 Class Posts
+                    </button>
+                    <button onclick="openPortalEndpoint('https://www.mystudentsquare.com/messages')" class="p-2.5 bg-slate-800/60 border border-slate-700/60 hover:border-brand-500 rounded-xl text-center text-xs text-slate-300 hover:text-white transition">
+                        💬 Messages
+                    </button>
+                    <button onclick="openPortalEndpoint('https://www.mystudentsquare.com/groups')" class="p-2.5 bg-slate-800/60 border border-slate-700/60 hover:border-brand-500 rounded-xl text-center text-xs text-slate-300 hover:text-white transition">
+                        👥 Student Groups
+                    </button>
+                    <button onclick="openPortalEndpoint('https://www.mystudentsquare.com/forms')" class="p-2.5 bg-slate-800/60 border border-slate-700/60 hover:border-brand-500 rounded-xl text-center text-xs text-slate-300 hover:text-white transition">
+                        📝 Forms & Slips
+                    </button>
+                </div>
+
+                <!-- Frame Wrapper container with Security Alert Banner -->
+                <div class="flex-1 min-h-[500px] bg-slate-800/40 border border-slate-800 rounded-2xl overflow-hidden flex flex-col relative">
+                    <!-- Security / X-Frame-Options Information Bar -->
+                    <div class="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between text-xs text-amber-300">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            <span>If your school district uses strict Single-Sign-On (SSO / Google OAuth), use the "Dedicated Window" button above for the best login flow.</span>
+                        </div>
+                        <button onclick="launchPopoutWindow()" class="underline font-semibold hover:text-white ml-2">Open Dedicated Portal Window</button>
+                    </div>
+
+                    <!-- Main Iframe Container -->
+                    <iframe id="studentsquare-iframe" 
+                        src="https://www.mystudentsquare.com" 
+                        class="w-full h-full border-0 flex-1 bg-white"
+                        title="StudentSquare Portal"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms">
+                    </iframe>
+                </div>
+            </section>
+
+            <!-- TAB 2: ANNOUNCEMENTS FEED -->
+            <section id="tab-feed-hub" class="tab-content hidden space-y-4">
+                <!-- Feed Filter & Header Bar -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4">
+                    <div>
+                        <h2 class="font-bold text-lg text-white">School & Class Announcement Feed</h2>
+                        <p class="text-xs text-slate-400">Offline-cached announcements, alerts, and teacher updates</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="filterFeed('all')" class="feed-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-600 text-white transition">All</button>
+                        <button onclick="filterFeed('alert')" class="feed-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition">🚨 Alerts</button>
+                        <button onclick="filterFeed('homework')" class="feed-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition">📚 Homework</button>
+                        <button onclick="filterFeed('athletics')" class="feed-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition">⚽ Athletics</button>
+                        <button onclick="filterFeed('clubs')" class="feed-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition">🎨 Clubs</button>
+                        <button onclick="filterFeed('starred')" class="feed-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition">⭐ Bookmarked</button>
+                        
+                        <button onclick="openNewAnnouncementModal()" class="ml-auto px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium flex items-center space-x-1 shadow transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <span>Simulate Notice</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Announcement List Grid -->
+                <div id="feed-container" class="space-y-4">
+                    <!-- Cards dynamically populated via JS -->
+                </div>
+            </section>
+
+            <!-- TAB 3: MESSAGES & STAFF DIRECTORY -->
+            <section id="tab-messages-hub" class="tab-content hidden h-full flex flex-col md:flex-row gap-4 min-h-[550px]">
+                <!-- Staff Directory Sidebar -->
+                <div class="w-full md:w-80 bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4 flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-slate-100 text-sm">Teachers & Staff Directory</h3>
+                        <button onclick="testBrowserNotification()" class="text-[11px] text-cyan-400 hover:underline flex items-center space-x-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 01-6 0v-1m6 0H9"/></svg>
+                            <span>Test Alert</span>
+                        </button>
+                    </div>
+
+                    <!-- Staff Search -->
+                    <div class="relative mb-3">
+                        <input type="text" id="staff-search-input" placeholder="Search teacher..." 
+                            class="w-full pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+
+                    <!-- Staff List -->
+                    <div id="staff-list-container" class="space-y-2 overflow-y-auto flex-1 pr-1">
+                        <!-- Staff items inserted by JS -->
+                    </div>
+                </div>
+
+                <!-- Chat Conversation Workspace -->
+                <div class="flex-1 bg-slate-800/80 border border-slate-700/70 rounded-2xl flex flex-col overflow-hidden">
+                    <!-- Chat Header -->
+                    <div id="chat-header" class="p-4 border-b border-slate-700/60 bg-slate-800/90 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div id="chat-avatar" class="w-10 h-10 rounded-full bg-brand-600 text-white font-bold flex items-center justify-center text-sm">
+                                SD
+                            </div>
+                            <div>
+                                <h3 id="chat-contact-name" class="font-bold text-slate-100 text-sm">Mrs. Sarah Davis</h3>
+                                <p id="chat-contact-title" class="text-xs text-slate-400">AP Physics Teacher • Room 204</p>
+                            </div>
+                        </div>
+
+                        <span class="px-2.5 py-1 text-xs rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Verified Educator</span>
+                    </div>
+
+                    <!-- Chat Message Stream -->
+                    <div id="chat-messages-container" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-900/50">
+                        <!-- Message Bubbles via JS -->
+                    </div>
+
+                    <!-- Quick Response Templates -->
+                    <div class="px-4 py-2 border-t border-slate-700/60 bg-slate-800/40 flex items-center space-x-2 overflow-x-auto">
+                        <span class="text-[11px] text-slate-400 shrink-0">Quick Templates:</span>
+                        <button onclick="applyQuickReply('Inquiring about recent assignment grade')" class="px-2.5 py-1 bg-slate-700/60 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] whitespace-nowrap transition">📄 Assignment Inquiry</button>
+                        <button onclick="applyQuickReply('Absence notice for upcoming appointments')" class="px-2.5 py-1 bg-slate-700/60 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] whitespace-nowrap transition">🤒 Excused Absence</button>
+                        <button onclick="applyQuickReply('Question about homework problem #4')" class="px-2.5 py-1 bg-slate-700/60 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] whitespace-nowrap transition">❓ Homework Help</button>
+                    </div>
+
+                    <!-- Input Box -->
+                    <form id="chat-form" onsubmit="sendChatMessage(event)" class="p-3 border-t border-slate-700/60 bg-slate-800/90 flex items-center space-x-2">
+                        <input type="text" id="chat-input" placeholder="Type a message to your teacher..." 
+                            class="flex-1 px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-sm font-medium transition flex items-center space-x-1 shadow">
+                            <span>Send</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9-7-9-7-9 7 9 7zm0 0v-8"/></svg>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- TAB 4: SCHEDULE & HOMEWORK PLANNER -->
+            <section id="tab-planner-hub" class="tab-content hidden space-y-4">
+                <!-- Summary Dashboard Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-400">Total Assignments</p>
+                            <h3 id="stat-total-tasks" class="text-2xl font-bold text-white">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-400">Completed</p>
+                            <h3 id="stat-completed-tasks" class="text-2xl font-bold text-emerald-400">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-400">Urgent & Exams</p>
+                            <h3 id="stat-urgent-tasks" class="text-2xl font-bold text-amber-400">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        </div>
+                    </div>
+
+                    <!-- Daily Completion Progress Bar -->
+                    <div class="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4 flex flex-col justify-between">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400">Daily Completion</span>
+                            <span id="daily-progress-percent" class="font-bold text-cyan-400">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-700 h-2.5 rounded-full overflow-hidden mt-2">
+                            <div id="daily-progress-bar" class="bg-gradient-to-r from-cyan-400 to-indigo-500 h-full w-0 transition-all duration-500"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Planner Header & Export Actions -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="togglePlannerView('tasks')" id="btn-view-tasks" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-600 text-white transition">Tasks & Homework</button>
+                        <button onclick="togglePlannerView('schedule')" id="btn-view-schedule" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition">Class Timetable</button>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="openAddTaskModal()" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-medium flex items-center space-x-1 shadow transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <span>Add Homework (Ctrl+N)</span>
+                        </button>
+
+                        <button onclick="exportTasksAsJSON()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium flex items-center space-x-1 transition" title="Export tasks to JSON">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span>Export JSON</span>
+                        </button>
+
+                        <button onclick="exportTasksAsICS()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium flex items-center space-x-1 transition" title="Export schedule to .ics calendar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span>Export .ICS</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- View 1: Tasks List -->
+                <div id="planner-tasks-view" class="space-y-3">
+                    <div id="tasks-container" class="space-y-2">
+                        <!-- Tasks generated via JS -->
+                    </div>
+                </div>
+
+                <!-- View 2: Class Timetable Grid -->
+                <div id="planner-schedule-view" class="hidden bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4 overflow-x-auto">
+                    <h3 class="font-bold text-slate-100 text-sm mb-3">Chromebook Daily Bell Schedule</h3>
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-700 text-slate-400">
+                                <th class="py-2.5 px-3">Period</th>
+                                <th class="py-2.5 px-3">Time</th>
+                                <th class="py-2.5 px-3">Course Title</th>
+                                <th class="py-2.5 px-3">Teacher</th>
+                                <th class="py-2.5 px-3">Room</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700/50 text-slate-300">
+                            <tr><td class="py-2.5 px-3 font-semibold text-brand-400">Period 1</td><td class="py-2.5 px-3">8:00 AM - 8:50 AM</td><td class="py-2.5 px-3">AP Physics 1</td><td class="py-2.5 px-3">Mrs. Davis</td><td class="py-2.5 px-3">Room 204</td></tr>
+                            <tr><td class="py-2.5 px-3 font-semibold text-brand-400">Period 2</td><td class="py-2.5 px-3">8:55 AM - 9:45 AM</td><td class="py-2.5 px-3">English Literature</td><td class="py-2.5 px-3">Mr. Vance</td><td class="py-2.5 px-3">Room 112</td></tr>
+                            <tr><td class="py-2.5 px-3 font-semibold text-brand-400">Period 3</td><td class="py-2.5 px-3">9:50 AM - 10:40 AM</td><td class="py-2.5 px-3">US History</td><td class="py-2.5 px-3">Ms. Gable</td><td class="py-2.5 px-3">Room 305</td></tr>
+                            <tr class="bg-indigo-500/10"><td class="py-2.5 px-3 font-semibold text-indigo-300">Lunch / Homeroom</td><td class="py-2.5 px-3">10:45 AM - 11:30 AM</td><td class="py-2.5 px-3 font-semibold">Student Commons</td><td class="py-2.5 px-3">-</td><td class="py-2.5 px-3">Cafeteria</td></tr>
+                            <tr><td class="py-2.5 px-3 font-semibold text-brand-400">Period 4</td><td class="py-2.5 px-3">11:35 AM - 12:25 PM</td><td class="py-2.5 px-3">AP Calculus AB</td><td class="py-2.5 px-3">Dr. Jenkins</td><td class="py-2.5 px-3">Room 208</td></tr>
+                            <tr><td class="py-2.5 px-3 font-semibold text-brand-400">Period 5</td><td class="py-2.5 px-3">12:30 PM - 1:20 PM</td><td class="py-2.5 px-3">Computer Science Principles</td><td class="py-2.5 px-3">Mr. Tech</td><td class="py-2.5 px-3">Lab 402</td></tr>
+                            <tr><td class="py-2.5 px-3 font-semibold text-brand-400">Period 6</td><td class="py-2.5 px-3">1:25 PM - 2:15 PM</td><td class="py-2.5 px-3">Spanish III</td><td class="py-2.5 px-3">Sra. Ortiz</td><td class="py-2.5 px-3">Room 103</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 5: CLASS NOTES SCRATCHPAD -->
+            <section id="tab-notes-hub" class="tab-content hidden h-full flex flex-col md:flex-row gap-4 min-h-[550px]">
+                <!-- Notes Selector Sidebar -->
+                <div class="w-full md:w-72 bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4 flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-slate-100 text-sm">Class Notebooks</h3>
+                        <button onclick="createNewNote()" class="p-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs transition flex items-center space-x-1" title="New Note">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Notes Search -->
+                    <input type="text" id="notes-search-input" placeholder="Search notes..." 
+                        class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500 mb-3">
+
+                    <!-- Notes Item List -->
+                    <div id="notes-list-container" class="space-y-2 overflow-y-auto flex-1 pr-1">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Active Note Editor -->
+                <div class="flex-1 bg-slate-800/80 border border-slate-700/70 rounded-2xl flex flex-col overflow-hidden">
+                    <!-- Note Editor Header & Options -->
+                    <div class="p-4 border-b border-slate-700/60 bg-slate-800/90 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex-1 min-w-[200px] flex items-center space-x-2">
+                            <input type="text" id="note-title-input" placeholder="Note Title..." 
+                                class="w-full bg-transparent font-bold text-lg text-white placeholder-slate-500 focus:outline-none border-b border-transparent focus:border-brand-500">
+                        </div>
+
+                        <div class="flex items-center space-x-2">
+                            <select id="note-subject-select" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none">
+                                <option value="Physics">Physics</option>
+                                <option value="English">English</option>
+                                <option value="History">History</option>
+                                <option value="Math">Math</option>
+                                <option value="Computer Science">Computer Science</option>
+                                <option value="General">General</option>
+                            </select>
+
+                            <button onclick="downloadActiveNote('md')" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium transition" title="Download Markdown">
+                                .MD
+                            </button>
+                            <button onclick="downloadActiveNote('txt')" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium transition" title="Download Text">
+                                .TXT
+                            </button>
+                            <button onclick="deleteActiveNote()" class="p-1.5 bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 rounded-lg text-xs transition" title="Delete Note">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Format Toolbar -->
+                    <div class="px-4 py-2 border-b border-slate-700/60 bg-slate-800/40 flex items-center space-x-2 text-xs">
+                        <button onclick="insertNoteFormatting('bold')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300 font-bold">B</button>
+                        <button onclick="insertNoteFormatting('italic')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300 italic">I</button>
+                        <button onclick="insertNoteFormatting('heading')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300 font-semibold"># H2</button>
+                        <button onclick="insertNoteFormatting('list')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300">• List</button>
+                        <button onclick="insertNoteFormatting('code')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300 font-mono">&lt;/&gt;</button>
+                        
+                        <div class="ml-auto text-[11px] text-emerald-400 flex items-center space-x-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                            <span id="autosave-status">Saved locally</span>
+                        </div>
+                    </div>
+
+                    <!-- Note Textarea -->
+                    <textarea id="note-body-input" placeholder="Start typing your class notes here..." 
+                        class="w-full flex-1 p-4 bg-slate-900/60 text-slate-200 placeholder-slate-500 focus:outline-none resize-none font-mono text-sm leading-relaxed"></textarea>
+
+                    <!-- Footer Stats -->
+                    <div class="px-4 py-2 border-t border-slate-700/60 bg-slate-800/90 text-slate-400 text-[11px] flex justify-between">
+                        <span id="note-word-count">0 words</span>
+                        <span id="note-char-count">0 characters</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: CHROMEBOOK PWA GUIDE & DIAGNOSTICS -->
+            <section id="tab-pwa-guide" class="tab-content hidden space-y-6 max-w-4xl mx-auto">
+                <div class="bg-gradient-to-r from-indigo-900/60 via-slate-800 to-slate-800 border border-indigo-500/30 rounded-2xl p-6 shadow-lg">
+                    <h2 class="text-xl font-bold text-white mb-2">Chromebook Chrome OS Optimization Guide</h2>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        This Progressive Web App client is specifically optimized for Chrome OS on 11-15" Chromebook displays. Install it directly to your launcher to enjoy full screen app behavior, offline state caching, and rapid launch times.
+                    </p>
+                </div>
+
+                <!-- Installation Steps Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 font-bold flex items-center justify-center text-sm mb-3">1</div>
+                        <h3 class="font-bold text-slate-100 text-sm mb-1">Install to Shelf</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            Click the "Install App" button in the top navigation bar or click Chrome's three-dot menu icon in the upper right and select <span class="text-indigo-300">Save and share &gt; Install StudentSquare</span>.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 font-bold flex items-center justify-center text-sm mb-3">2</div>
+                        <h3 class="font-bold text-slate-100 text-sm mb-1">Pin to Launcher Shelf</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            On your Chromebook Shelf (bottom taskbar), right-click (two-finger tap) the StudentSquare icon and choose <span class="text-indigo-300">Pin to shelf</span> for one-touch access.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 font-bold flex items-center justify-center text-sm mb-3">3</div>
+                        <h3 class="font-bold text-slate-100 text-sm mb-1">Enable Notifications</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            Click "Test Alert" in the Messages tab to grant desktop notifications for instant updates from teachers and school administration.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Keyboard Shortcuts Reference Table -->
+                <div class="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-5">
+                    <h3 class="font-bold text-slate-100 text-sm mb-4">Chrome OS Keyboard Shortcuts</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div class="flex justify-between p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/50">
+                            <span class="text-slate-300">Live StudentSquare Portal</span>
+                            <kbd class="font-mono text-cyan-400 font-bold">Ctrl + 1</kbd>
+                        </div>
+                        <div class="flex justify-between p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/50">
+                            <span class="text-slate-300">Announcements Feed</span>
+                            <kbd class="font-mono text-cyan-400 font-bold">Ctrl + 2</kbd>
+                        </div>
+                        <div class="flex justify-between p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/50">
+                            <span class="text-slate-300">Messages & Staff Directory</span>
+                            <kbd class="font-mono text-cyan-400 font-bold">Ctrl + 3</kbd>
+                        </div>
+                        <div class="flex justify-between p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/50">
+                            <span class="text-slate-300">Schedule & Homework</span>
+                            <kbd class="font-mono text-cyan-400 font-bold">Ctrl + 4</kbd>
+                        </div>
+                        <div class="flex justify-between p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/50">
+                            <span class="text-slate-300">Class Notes Scratchpad</span>
+                            <kbd class="font-mono text-cyan-400 font-bold">Ctrl + 5</kbd>
+                        </div>
+                        <div class="flex justify-between p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/50">
+                            <span class="text-slate-300">Quick Homework / Note Modal</span>
+                            <kbd class="font-mono text-cyan-400 font-bold">Ctrl + N</kbd>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL 1: Add Homework Task Modal -->
+    <div id="modal-add-task" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-5 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-white text-base">Add Homework / Task</h3>
+                <button onclick="closeModal('modal-add-task')" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            
+            <form onsubmit="handleAddTaskSubmit(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Task Description</label>
+                    <input type="text" id="task-title-input" required placeholder="e.g. Read Physics Chapter 4..." 
+                        class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Subject / Class</label>
+                        <select id="task-subject-input" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none">
+                            <option value="Physics">Physics</option>
+                            <option value="English">English</option>
+                            <option value="Math">Math</option>
+                            <option value="History">History</option>
+                            <option value="Computer Science">Computer Science</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Priority Tag</label>
+                        <select id="task-priority-input" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none">
+                            <option value="Homework">Homework</option>
+                            <option value="Urgent">Urgent</option>
+                            <option value="Exam">Exam</option>
+                            <option value="Project">Project</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Due Date</label>
+                    <input type="date" id="task-due-input" required 
+                        class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none">
+                </div>
+
+                <div class="pt-3 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-add-task')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-medium">Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: New Announcement Notice Simulator -->
+    <div id="modal-add-notice" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-5 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-white text-base">Simulate Teacher / School Notice</h3>
+                <button onclick="closeModal('modal-add-notice')" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            
+            <form onsubmit="handleAddNoticeSubmit(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Notice Title</label>
+                    <input type="text" id="notice-title-input" required placeholder="e.g. Schedule Change..." 
+                        class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Author</label>
+                        <input type="text" id="notice-author-input" required placeholder="e.g. Principal Martinez" 
+                            class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Category</label>
+                        <select id="notice-category-input" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none">
+                            <option value="alert">🚨 Urgent Alert</option>
+                            <option value="homework">📚 Homework</option>
+                            <option value="athletics">⚽ Athletics</option>
+                            <option value="clubs">🎨 Clubs</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Notice Details</label>
+                    <textarea id="notice-content-input" rows="3" required placeholder="Details..." 
+                        class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none resize-none"></textarea>
+                </div>
+
+                <div class="pt-3 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-add-notice')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-medium">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium">Post Notice</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Announcement Detail & Attachment Viewer -->
+    <div id="modal-view-notice" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-view-notice')" class="absolute top-4 right-4 text-slate-400 hover:text-white">&times;</button>
+            <div id="view-notice-content">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: Keyboard Shortcuts Helper -->
+    <div id="modal-shortcuts" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-5 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-white text-base">Chromebook Key Shortcuts</h3>
+                <button onclick="closeModal('modal-shortcuts')" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <div class="space-y-2 text-xs">
+                <div class="flex justify-between py-1 border-b border-slate-700"><span class="text-slate-300">Live Portal</span><kbd class="font-mono text-cyan-400">Ctrl + 1</kbd></div>
+                <div class="flex justify-between py-1 border-b border-slate-700"><span class="text-slate-300">Announcements Feed</span><kbd class="font-mono text-cyan-400">Ctrl + 2</kbd></div>
+                <div class="flex justify-between py-1 border-b border-slate-700"><span class="text-slate-300">Messages & Staff</span><kbd class="font-mono text-cyan-400">Ctrl + 3</kbd></div>
+                <div class="flex justify-between py-1 border-b border-slate-700"><span class="text-slate-300">Schedule & Homework</span><kbd class="font-mono text-cyan-400">Ctrl + 4</kbd></div>
+                <div class="flex justify-between py-1 border-b border-slate-700"><span class="text-slate-300">Class Notes</span><kbd class="font-mono text-cyan-400">Ctrl + 5</kbd></div>
+                <div class="flex justify-between py-1 border-b border-slate-700"><span class="text-slate-300">New Task / Note</span><kbd class="font-mono text-cyan-400">Ctrl + N</kbd></div>
+                <div class="flex justify-between py-1 border-b border-slate-700"><span class="text-slate-300">Global Search Bar</span><kbd class="font-mono text-cyan-400">Ctrl + K</kbd></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Banner Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        // Default Mock Data for Offline Storage
+        const initialFeed = [
+            {
+                id: '1',
+                title: 'District Weather Alert: Modified Bell Schedule Tomorrow',
+                author: 'Principal Martinez',
+                date: 'Today at 7:30 AM',
+                category: 'alert',
+                content: 'Due to severe weather conditions forecasted for tomorrow morning, all classes will follow the 2-hour delayed schedule. Period 1 begins at 10:00 AM.',
+                starred: true,
+                read: false,
+                attachment: 'Delayed_Schedule_Info.pdf'
+            },
+            {
+                id: '2',
+                title: 'AP Physics Chapter 4 Problem Set & Virtual Lab Due Friday',
+                author: 'Mrs. Davis - AP Physics',
+                date: 'Yesterday at 3:15 PM',
+                category: 'homework',
+                content: 'Please submit questions 1-15 on Momentum and Energy Conservation in your online notebook or attach as PDF before 11:59 PM.',
+                starred: false,
+                read: true,
+                attachment: 'AP_Physics_Lab_Guide.pdf'
+            },
+            {
+                id: '3',
+                title: 'Varsity Basketball Practice & Tournament Bus Schedule',
+                author: 'Coach Miller',
+                date: 'Aug 28, 2026',
+                category: 'athletics',
+                content: 'Practice is shifted to Gym B today. The team bus for Friday’s match leaves at 3:45 PM behind the science building.',
+                starred: false,
+                read: true
+            },
+            {
+                id: '4',
+                title: 'Robotics Club Chromebook Hackathon Registration',
+                author: 'Tech Department & Robotics',
+                date: 'Aug 26, 2026',
+                category: 'clubs',
+                content: 'Join us in Lab 402 for our annual coding hackathon! Register your team of 2-4 students by Wednesday.',
+                starred: true,
+                read: false
+            }
+        ];
+
+        const initialStaff = [
+            {
+                id: '1',
+                name: 'Mrs. Sarah Davis',
+                title: 'AP Physics Teacher • Room 204',
+                unread: true,
+                avatar: 'SD',
+                messages: [
+                    { sender: 'them', text: 'Hello! Don\'t forget to submit your lab report before midnight tonight.', time: '2:15 PM' },
+                    { sender: 'me', text: 'Thanks Mrs. Davis! I am finishing up graph analysis right now.', time: '2:18 PM' }
+                ]
+            },
+            {
+                id: '2',
+                name: 'Mr. Alan Vance',
+                title: 'English Literature • Room 112',
+                unread: true,
+                avatar: 'AV',
+                messages: [
+                    { sender: 'them', text: 'Great analysis on Hamlet in class today! Attached the reading list for next week.', time: 'Yesterday' }
+                ]
+            },
+            {
+                id: '3',
+                name: 'Ms. Elena Rivera',
+                title: 'Academic Counselor • Office 10',
+                unread: false,
+                avatar: 'ER',
+                messages: [
+                    { sender: 'them', text: 'Your course selection form for next year is ready for review.', time: 'Aug 27' }
+                ]
+            }
+        ];
+
+        const initialTasks = [
+            { id: '1', title: 'Complete AP Physics Ch.4 Questions', subject: 'Physics', priority: 'Urgent', due: '2026-09-01', completed: false },
+            { id: '2', title: 'Read Hamlet Act 3 Scene 2', subject: 'English', priority: 'Homework', due: '2026-09-02', completed: false },
+            { id: '3', title: 'Draft History Essay Outline', subject: 'History', priority: 'Project', due: '2026-09-05', completed: false },
+            { id: '4', title: 'Submit Math Practice Worksheet #5', subject: 'Math', priority: 'Homework', due: '2026-08-30', completed: true }
+        ];
+
+        const initialNotes = [
+            {
+                id: '1',
+                title: 'Physics - Newton\'s Laws & Momentum',
+                subject: 'Physics',
+                content: '# Physics Notes: Newton\'s Laws & Momentum\n\n- **1st Law**: Inertia (An object at rest stays at rest)\n- **2nd Law**: F = m * a\n- **3rd Law**: Action & Reaction\n\n### Momentum Formula:\n`p = m * v`\n\nRemember to review elastic vs inelastic collisions before Friday quiz!',
+                updated: 'Today'
+            },
+            {
+                id: '2',
+                title: 'English Lit - Hamlet Key Themes',
+                subject: 'English',
+                content: '# Hamlet Soliloquy Analysis\n\n1. Revenge vs. Morality\n2. Madness (Feigned vs. Real)\n3. Mortality & Corruption\n\nKey quote: *"To be, or not to be, that is the question."*',
+                updated: 'Yesterday'
+            }
+        ];
+
+        let state = {
+            feed: JSON.parse(localStorage.getItem('ss_feed')) || initialFeed,
+            staff: JSON.parse(localStorage.getItem('ss_staff')) || initialStaff,
+            tasks: JSON.parse(localStorage.getItem('ss_tasks')) || initialTasks,
+            notes: JSON.parse(localStorage.getItem('ss_notes')) || initialNotes,
+            activeStaffId: '1',
+            activeNoteId: '1',
+            activeFeedFilter: 'all',
+            deferredPrompt: null
+        };
+
+        function saveState() {
+            localStorage.setItem('ss_feed', JSON.stringify(state.feed));
+            localStorage.setItem('ss_staff', JSON.stringify(state.staff));
+            localStorage.setItem('ss_tasks', JSON.stringify(state.tasks));
+            localStorage.setItem('ss_notes', JSON.stringify(state.notes));
+        }
+
+        function initPWA() {
+            // Dynamic Manifest Blob
+            const manifestObj = {
+                name: "StudentSquare Chromebook Hub",
+                short_name: "StudentSquare",
+                description: "Chromebook PWA client for StudentSquare portal and offline tools.",
+                start_url: "./",
+                display: "standalone",
+                background_color: "#0f172a",
+                theme_color: "#4f46e5",
+                icons: [
+                    {
+                        src: "https://placehold.co/192x192/4f46e5/ffffff?text=StudentSquare",
+                        sizes: "192x192",
+                        type: "image/png"
+                    },
+                    {
+                        src: "https://placehold.co/512x512/4f46e5/ffffff?text=StudentSquare",
+                        sizes: "512x512",
+                        type: "image/png"
+                    }
+                ]
+            };
+            const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/json' });
+            document.getElementById('manifest-placeholder').setAttribute('href', URL.createObjectURL(manifestBlob));
+
+            // Dynamic Service Worker Blob
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                    const CACHE_NAME = 'studentsquare-pwa-v1';
+                    self.addEventListener('install', (e) => self.skipWaiting());
+                    self.addEventListener('activate', (e) => self.clients.claim());
+                    self.addEventListener('fetch', (e) => {
+                        e.respondWith(
+                            fetch(e.request).catch(() => caches.match(e.request))
+                        );
+                    });
+                `;
+                const swBlob = new Blob([swCode], { type: 'text/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(console.error);
+            }
+
+            // PWA Install Prompt Handler
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                state.deferredPrompt = e;
+                const btn = document.getElementById('pwa-install-btn');
+                btn.classList.remove('hidden');
+                btn.classList.add('flex');
+            });
+
+            document.getElementById('pwa-install-btn').addEventListener('click', async () => {
+                if (state.deferredPrompt) {
+                    state.deferredPrompt.prompt();
+                    const { outcome } = await state.deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        showToast('StudentSquare installed successfully to Chrome OS Shelf!', 'success');
+                    }
+                    state.deferredPrompt = null;
+                } else {
+                    switchTab('pwa-guide');
+                }
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+                btn.classList.remove('bg-brand-600', 'text-white');
+                btn.classList.add('text-slate-300', 'hover:bg-slate-700/50');
+            });
+
+            const targetContent = document.getElementById(`tab-${tabId}`);
+            if (targetContent) targetContent.classList.remove('hidden');
+
+            const activeBtn = document.querySelector(`.nav-tab-btn[data-tab="${tabId}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-brand-600', 'text-white');
+                activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-700/50');
+            }
+
+            // Close mobile sidebar if open
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar-nav').classList.add('-translate-x-full');
+            }
+        }
+
+        function renderFeed() {
+            const container = document.getElementById('feed-container');
+            container.innerHTML = '';
+
+            const filtered = state.feed.filter(item => {
+                if (state.activeFeedFilter === 'all') return true;
+                if (state.activeFeedFilter === 'starred') return item.starred;
+                return item.category === state.activeFeedFilter;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-400 bg-slate-800/40 border border-slate-700/50 rounded-2xl">
+                        <p class="text-sm">No announcements found matching this category.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const badgeColor = item.category === 'alert' ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' :
+                                   item.category === 'homework' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' :
+                                   item.category === 'athletics' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
+                                   'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+
+                const card = document.createElement('div');
+                card.className = `bg-slate-800/80 border ${item.read ? 'border-slate-700/70' : 'border-brand-500/50'} rounded-2xl p-5 shadow-sm transition hover:border-slate-600`;
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeColor} capitalize">${item.category}</span>
+                            <span class="text-xs text-slate-400">${item.date}</span>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <button onclick="toggleStarFeed('${item.id}')" class="p-1 text-slate-400 hover:text-amber-400 transition" title="Bookmark">
+                                <svg class="w-5 h-5 ${item.starred ? 'text-amber-400 fill-amber-400' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-white text-base mb-1 cursor-pointer hover:text-brand-400" onclick="viewNoticeDetail('${item.id}')">${item.title}</h3>
+                    <p class="text-xs text-slate-400 mb-2">Posted by <span class="text-slate-200 font-medium">${item.author}</span></p>
+                    <p class="text-xs text-slate-300 leading-relaxed line-clamp-2 mb-3">${item.content}</p>
+                    
+                    <div class="flex items-center justify-between pt-3 border-t border-slate-700/60">
+                        ${item.attachment ? `
+                            <button onclick="viewNoticeDetail('${item.id}')" class="flex items-center space-x-1.5 text-xs text-cyan-400 hover:underline">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                <span>${item.attachment}</span>
+                            </button>
+                        ` : '<span></span>'}
+
+                        <button onclick="viewNoticeDetail('${item.id}')" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium transition">
+                            Read Full Post
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Update unread count badge
+            const unreadCount = state.feed.filter(f => !f.read).length;
+            document.getElementById('unread-feed-badge').textContent = unreadCount;
+        }
+
+        function filterFeed(category) {
+            state.activeFeedFilter = category;
+            document.querySelectorAll('.feed-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-brand-600', 'text-white');
+                btn.classList.add('bg-slate-700', 'text-slate-300');
+            });
+            event.target.classList.remove('bg-slate-700', 'text-slate-300');
+            event.target.classList.add('bg-brand-600', 'text-white');
+            renderFeed();
+        }
+
+        function toggleStarFeed(id) {
+            const item = state.feed.find(f => f.id === id);
+            if (item) {
+                item.starred = !item.starred;
+                saveState();
+                renderFeed();
+            }
+        }
+
+        function viewNoticeDetail(id) {
+            const item = state.feed.find(f => f.id === id);
+            if (!item) return;
+
+            item.read = true;
+            saveState();
+            renderFeed();
+
+            const modalContent = document.getElementById('view-notice-content');
+            modalContent.innerHTML = `
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-500/20 text-brand-300 border border-brand-500/30 uppercase mb-3 inline-block">${item.category}</span>
+                <h2 class="text-lg font-bold text-white mb-2">${item.title}</h2>
+                <div class="flex items-center space-x-2 text-xs text-slate-400 mb-4 pb-3 border-b border-slate-700">
+                    <span>By ${item.author}</span>
+                    <span>•</span>
+                    <span>${item.date}</span>
+                </div>
+                <div class="text-xs text-slate-200 leading-relaxed space-y-3 mb-4">
+                    <p>${item.content}</p>
+                </div>
+                ${item.attachment ? `
+                    <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 flex items-center justify-between text-xs">
+                        <div class="flex items-center space-x-2 text-slate-300">
+                            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                            <span>${item.attachment}</span>
+                        </div>
+                        <button onclick="showToast('Attachment downloaded for offline view', 'info')" class="px-3 py-1 bg-brand-600 hover:bg-brand-500 text-white rounded-lg transition">Download</button>
+                    </div>
+                ` : ''}
+            `;
+            openModal('modal-view-notice');
+        }
+
+        function openNewAnnouncementModal() {
+            openModal('modal-add-notice');
+        }
+
+        function handleAddNoticeSubmit(e) {
+            e.preventDefault();
+            const newNotice = {
+                id: Date.now().toString(),
+                title: document.getElementById('notice-title-input').value,
+                author: document.getElementById('notice-author-input').value,
+                category: document.getElementById('notice-category-input').value,
+                content: document.getElementById('notice-content-input').value,
+                date: 'Just now',
+                starred: false,
+                read: false
+            };
+            state.feed.unshift(newNotice);
+            saveState();
+            renderFeed();
+            closeModal('modal-add-notice');
+            showToast('Simulated announcement posted!', 'success');
+        }
+
+        function renderStaff() {
+            const container = document.getElementById('staff-list-container');
+            container.innerHTML = '';
+
+            state.staff.forEach(person => {
+                const isSelected = person.id === state.activeStaffId;
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-xl border transition cursor-pointer flex items-center justify-between ${isSelected ? 'bg-brand-600/20 border-brand-500' : 'bg-slate-900/60 border-slate-700/60 hover:border-slate-600'}`;
+                div.onclick = () => selectStaff(person.id);
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-brand-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                            ${person.avatar}
+                        </div>
+                        <div class="overflow-hidden">
+                            <h4 class="font-bold text-slate-100 text-xs truncate">${person.name}</h4>
+                            <p class="text-[10px] text-slate-400 truncate">${person.title}</p>
+                        </div>
+                    </div>
+                    ${person.unread ? '<span class="w-2 h-2 rounded-full bg-emerald-400"></span>' : ''}
+                `;
+                container.appendChild(div);
+            });
+
+            renderActiveChat();
+        }
+
+        function selectStaff(id) {
+            state.activeStaffId = id;
+            const staff = state.staff.find(s => s.id === id);
+            if (staff) staff.unread = false;
+            saveState();
+            renderStaff();
+        }
+
+        function renderActiveChat() {
+            const staff = state.staff.find(s => s.id === state.activeStaffId);
+            if (!staff) return;
+
+            document.getElementById('chat-avatar').textContent = staff.avatar;
+            document.getElementById('chat-contact-name').textContent = staff.name;
+            document.getElementById('chat-contact-title').textContent = staff.title;
+
+            const stream = document.getElementById('chat-messages-container');
+            stream.innerHTML = '';
+
+            staff.messages.forEach(msg => {
+                const isMe = msg.sender === 'me';
+                const wrapper = document.createElement('div');
+                wrapper.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;
+                wrapper.innerHTML = `
+                    <div class="max-w-[75%] p-3 rounded-2xl text-xs leading-relaxed ${isMe ? 'bg-brand-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-bl-none'}">
+                        <p>${msg.text}</p>
+                        <span class="block text-[10px] opacity-70 mt-1 text-right">${msg.time}</span>
+                    </div>
+                `;
+                stream.appendChild(wrapper);
+            });
+            stream.scrollTop = stream.scrollHeight;
+        }
+
+        function sendChatMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const staff = state.staff.find(s => s.id === state.activeStaffId);
+            if (staff) {
+                staff.messages.push({
+                    sender: 'me',
+                    text: text,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
+                saveState();
+                input.value = '';
+                renderActiveChat();
+
+                // Auto reply simulation after 1.5s
+                setTimeout(() => {
+                    staff.messages.push({
+                        sender: 'them',
+                        text: 'Thank you for reaching out via StudentSquare. I have received your message and will respond shortly.',
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    });
+                    saveState();
+                    renderActiveChat();
+                    showToast(`New message from ${staff.name}`, 'info');
+                }, 1500);
+            }
+        }
+
+        function applyQuickReply(templateText) {
+            document.getElementById('chat-input').value = templateText;
+        }
+
+        function testBrowserNotification() {
+            if (!("Notification" in window)) {
+                showToast("Notifications not supported on this browser context", "error");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    new Notification("StudentSquare Notification", {
+                        body: "Mrs. Sarah Davis updated AP Physics Chapter 4 assignment.",
+                        icon: "https://placehold.co/192x192/4f46e5/ffffff?text=SS"
+                    });
+                    showToast("Test notification dispatched to Chrome OS!", "success");
+                } else {
+                    showToast("Notification permission denied", "error");
+                }
+            });
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('tasks-container');
+            container.innerHTML = '';
+
+            state.tasks.forEach(task => {
+                const priorityBadge = task.priority === 'Urgent' ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' :
+                                      task.priority === 'Exam' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+                                      task.priority === 'Project' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' :
+                                      'bg-slate-700 text-slate-300 border-slate-600';
+
+                const div = document.createElement('div');
+                div.className = `p-3.5 bg-slate-800/80 border ${task.completed ? 'border-slate-800 opacity-60' : 'border-slate-700/70'} rounded-xl flex items-center justify-between gap-3 transition`;
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3 flex-1">
+                        <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTaskComplete('${task.id}')" 
+                            class="w-4 h-4 text-brand-600 rounded bg-slate-900 border-slate-700 focus:ring-brand-500 cursor-pointer">
+                        <div class="${task.completed ? 'line-through text-slate-500' : 'text-slate-200'}">
+                            <h4 class="font-bold text-xs">${task.title}</h4>
+                            <div class="flex items-center space-x-2 text-[10px] text-slate-400 mt-0.5">
+                                <span class="text-brand-400">${task.subject}</span>
+                                <span>•</span>
+                                <span>Due: ${task.due}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${priorityBadge}">${task.priority}</span>
+                        <button onclick="deleteTask('${task.id}')" class="text-slate-500 hover:text-rose-400 p-1 transition">&times;</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            // Update stats
+            const total = state.tasks.length;
+            const completed = state.tasks.filter(t => t.completed).length;
+            const urgent = state.tasks.filter(t => t.priority === 'Urgent' || t.priority === 'Exam').length;
+            const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+            document.getElementById('stat-total-tasks').textContent = total;
+            document.getElementById('stat-completed-tasks').textContent = completed;
+            document.getElementById('stat-urgent-tasks').textContent = urgent;
+            document.getElementById('daily-progress-percent').textContent = `${pct}%`;
+            document.getElementById('daily-progress-bar').style.width = `${pct}%`;
+        }
+
+        function toggleTaskComplete(id) {
+            const task = state.tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                saveState();
+                renderTasks();
+            }
+        }
+
+        function deleteTask(id) {
+            state.tasks = state.tasks.filter(t => t.id !== id);
+            saveState();
+            renderTasks();
+            showToast('Task removed', 'info');
+        }
+
+        function togglePlannerView(view) {
+            if (view === 'tasks') {
+                document.getElementById('planner-tasks-view').classList.remove('hidden');
+                document.getElementById('planner-schedule-view').classList.add('hidden');
+                document.getElementById('btn-view-tasks').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-600 text-white transition';
+                document.getElementById('btn-view-schedule').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition';
+            } else {
+                document.getElementById('planner-tasks-view').classList.add('hidden');
+                document.getElementById('planner-schedule-view').classList.remove('hidden');
+                document.getElementById('btn-view-schedule').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-600 text-white transition';
+                document.getElementById('btn-view-tasks').className = 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition';
+            }
+        }
+
+        function openAddTaskModal() {
+            openModal('modal-add-task');
+        }
+
+        function handleAddTaskSubmit(e) {
+            e.preventDefault();
+            const newTask = {
+                id: Date.now().toString(),
+                title: document.getElementById('task-title-input').value,
+                subject: document.getElementById('task-subject-input').value,
+                priority: document.getElementById('task-priority-input').value,
+                due: document.getElementById('task-due-input').value,
+                completed: false
+            };
+            state.tasks.unshift(newTask);
+            saveState();
+            renderTasks();
+            closeModal('modal-add-task');
+            showToast('Homework task added!', 'success');
+        }
+
+        function exportTasksAsJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.tasks, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "StudentSquare_Homework_Tasks.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('Exported tasks to JSON file', 'info');
+        }
+
+        function exportTasksAsICS() {
+            let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//StudentSquare Chromebook Client//EN\n";
+            state.tasks.forEach(task => {
+                const dateClean = task.due.replace(/-/g, '');
+                icsContent += `BEGIN:VEVENT\nSUMMARY:[${task.subject}] ${task.title}\nDTSTART:${dateClean}\nDESCRIPTION:Priority: ${task.priority}\nEND:VEVENT\n`;
+            });
+            icsContent += "END:VCALENDAR";
+
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', 'StudentSquare_Schedule.ics');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            showToast('Exported schedule as .ICS calendar file', 'info');
+        }
+
+        function renderNotes() {
+            const container = document.getElementById('notes-list-container');
+            container.innerHTML = '';
+
+            state.notes.forEach(note => {
+                const isSelected = note.id === state.activeNoteId;
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-xl border transition cursor-pointer ${isSelected ? 'bg-brand-600/20 border-brand-500' : 'bg-slate-900/60 border-slate-700/60 hover:border-slate-600'}`;
+                div.onclick = () => selectNote(note.id);
+                div.innerHTML = `
+                    <h4 class="font-bold text-slate-100 text-xs truncate mb-1">${note.title || 'Untitled Note'}</h4>
+                    <div class="flex items-center justify-between text-[10px] text-slate-400">
+                        <span class="text-brand-400 font-medium">${note.subject}</span>
+                        <span>${note.updated}</span>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            loadActiveNote();
+        }
+
+        function selectNote(id) {
+            saveCurrentNoteState();
+            state.activeNoteId = id;
+            renderNotes();
+        }
+
+        function loadActiveNote() {
+            const note = state.notes.find(n => n.id === state.activeNoteId);
+            if (!note) return;
+
+            document.getElementById('note-title-input').value = note.title;
+            document.getElementById('note-subject-select').value = note.subject;
+            document.getElementById('note-body-input').value = note.content;
+
+            updateNoteStats();
+        }
+
+        function saveCurrentNoteState() {
+            const note = state.notes.find(n => n.id === state.activeNoteId);
+            if (note) {
+                note.title = document.getElementById('note-title-input').value;
+                note.subject = document.getElementById('note-subject-select').value;
+                note.content = document.getElementById('note-body-input').value;
+                note.updated = 'Just now';
+                saveState();
+            }
+        }
+
+        function createNewNote() {
+            saveCurrentNoteState();
+            const newNote = {
+                id: Date.now().toString(),
+                title: 'New Class Note',
+                subject: 'General',
+                content: '',
+                updated: 'Just now'
+            };
+            state.notes.unshift(newNote);
+            state.activeNoteId = newNote.id;
+            saveState();
+            renderNotes();
+            showToast('New note created', 'success');
+        }
+
+        function deleteActiveNote() {
+            if (state.notes.length <= 1) {
+                showToast('Cannot delete sole note', 'error');
+                return;
+            }
+            state.notes = state.notes.filter(n => n.id !== state.activeNoteId);
+            state.activeNoteId = state.notes[0].id;
+            saveState();
+            renderNotes();
+            showToast('Note deleted', 'info');
+        }
+
+        function insertNoteFormatting(type) {
+            const textarea = document.getElementById('note-body-input');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+
+            let replacement = '';
+            if (type === 'bold') replacement = `**${selectedText || 'bold text'}**`;
+            else if (type === 'italic') replacement = `*${selectedText || 'italic text'}*`;
+            else if (type === 'heading') replacement = `\n## ${selectedText || 'Heading'}\n`;
+            else if (type === 'list') replacement = `\n- ${selectedText || 'List item'}`;
+            else if (type === 'code') replacement = `\`${selectedText || 'code'}\``;
+
+            textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+            saveCurrentNoteState();
+            updateNoteStats();
+        }
+
+        function updateNoteStats() {
+            const text = document.getElementById('note-body-input').value;
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            const chars = text.length;
+
+            document.getElementById('note-word-count').textContent = `${words} words`;
+            document.getElementById('note-char-count').textContent = `${chars} characters`;
+        }
+
+        function downloadActiveNote(format) {
+            saveCurrentNoteState();
+            const note = state.notes.find(n => n.id === state.activeNoteId);
+            if (!note) return;
+
+            const filename = `${note.title.replace(/[^a-z0-9]/gi, '_')}.${format}`;
+            const blob = new Blob([note.content], { type: 'text/plain;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            showToast(`Downloaded note as ${filename}`, 'info');
+        }
+
+        function launchPopoutWindow() {
+            window.open('https://www.mystudentsquare.com/', 'StudentSquarePortal', 'width=1100,height=750,resizable=yes,scrollbars=yes');
+        }
+
+        function openPortalEndpoint(url) {
+            window.open(url, '_blank');
+        }
+
+        function reloadIframe() {
+            const iframe = document.getElementById('studentsquare-iframe');
+            iframe.src = iframe.src;
+            showToast('Reloading StudentSquare Portal Frame...', 'info');
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bg = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-brand-600';
+            toast.className = `${bg} text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-medium flex items-center space-x-2 transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto`;
+            toast.innerHTML = `<span>${msg}</span>`;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function initClock() {
+            const clockEl = document.getElementById('chromebook-clock');
+            function updateClock() {
+                const now = new Date();
+                clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        function initNetworkMonitoring() {
+            const badge = document.getElementById('connection-badge');
+            const text = document.getElementById('connection-text');
+
+            function updateStatus() {
+                if (navigator.onLine) {
+                    badge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                    text.textContent = "Online";
+                } else {
+                    badge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20";
+                    text.textContent = "Offline Mode";
+                    showToast("Switched to Chrome OS Offline Mode", "info");
+                }
+            }
+            window.addEventListener('online', updateStatus);
+            window.addEventListener('offline', updateStatus);
+            updateStatus();
+        }
+
+        function initThemeToggle() {
+            const sun = document.getElementById('theme-sun');
+            const moon = document.getElementById('theme-moon');
+
+            document.getElementById('theme-toggle-btn').addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                const isDark = document.documentElement.classList.contains('dark');
+                sun.classList.toggle('hidden', !isDark);
+                moon.classList.toggle('hidden', isDark);
+                localStorage.setItem('ss_theme', isDark ? 'dark' : 'light');
+            });
+        }
+
+        function initKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                    if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+                        e.preventDefault();
+                        document.getElementById('global-search-input').focus();
+                    }
+                    return;
+                }
+
+                if (e.ctrlKey && e.key === '1') { e.preventDefault(); switchTab('live-portal'); }
+                if (e.ctrlKey && e.key === '2') { e.preventDefault(); switchTab('feed-hub'); }
+                if (e.ctrlKey && e.key === '3') { e.preventDefault(); switchTab('messages-hub'); }
+                if (e.ctrlKey && e.key === '4') { e.preventDefault(); switchTab('planner-hub'); }
+                if (e.ctrlKey && e.key === '5') { e.preventDefault(); switchTab('notes-hub'); }
+                if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); openAddTaskModal(); }
+                if (e.ctrlKey && e.key.toLowerCase() === 'k') { e.preventDefault(); document.getElementById('global-search-input').focus(); }
+                if (e.key === '?') { e.preventDefault(); openModal('modal-shortcuts'); }
+            });
+
+            // Navigation Tab Button Click Listener
+            document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabId = btn.getAttribute('data-tab');
+                    switchTab(tabId);
+                });
+            });
+
+            // Note title & body input auto-save listener
+            document.getElementById('note-title-input').addEventListener('input', saveCurrentNoteState);
+            document.getElementById('note-subject-select').addEventListener('change', saveCurrentNoteState);
+            document.getElementById('note-body-input').addEventListener('input', () => {
+                saveCurrentNoteState();
+                updateNoteStats();
+            });
+
+            // Toggle Mobile Sidebar
+            document.getElementById('toggle-sidebar-btn').addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar-nav');
+                sidebar.classList.toggle('-translate-x-full');
+            });
+
+            // Global search listener
+            document.getElementById('global-search-input').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                if (!query) return;
+
+                // Auto switch to feed tab if searching
+                if (document.getElementById('tab-feed-hub').classList.contains('hidden')) {
+                    switchTab('feed-hub');
+                }
+                
+                state.feed.forEach(f => {
+                    const matches = f.title.toLowerCase().includes(query) || f.content.toLowerCase().includes(query);
+                });
+            });
+
+            document.getElementById('open-shortcuts-btn').addEventListener('click', () => {
+                openModal('modal-shortcuts');
+            });
+        }
+
+        window.onload = function () {
+            initPWA();
+            initClock();
+            initNetworkMonitoring();
+            initThemeToggle();
+            initKeyboardShortcuts();
+
+            renderFeed();
+            renderStaff();
+            renderTasks();
+            renderNotes();
+
+            // Default to Live Portal
+            switchTab('live-portal');
+        };
+    </script>
+</body>
+</html>
